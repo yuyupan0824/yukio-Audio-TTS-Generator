@@ -7,8 +7,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-APP_PASSWORD = os.getenv("APP_PASSWORD", "admin123")
-FISH_AUDIO_API_KEY = os.getenv("FISH_AUDIO_API_KEY", "")
+def get_secret(key, default=""):
+    """Streamlit Secrets および .env / 環境変数の両方からキーを取得"""
+    try:
+        if hasattr(st, "secrets") and key in st.secrets:
+            return str(st.secrets[key])
+    except Exception:
+        pass
+    return os.getenv(key, default)
+
+APP_PASSWORD = get_secret("APP_PASSWORD", "admin123")
+FISH_AUDIO_API_KEY = get_secret("FISH_AUDIO_API_KEY", "")
 
 st.set_page_config(page_title="yukio Audio TTS Generator", layout="centered")
 
@@ -36,6 +45,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def check_password():
+    current_password = get_secret("APP_PASSWORD", "admin123")
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
 
@@ -44,7 +54,7 @@ def check_password():
         saved_password = st.session_state.get("saved_password", "")
         password = st.text_input("Password", value=saved_password, type="password")
         if st.button("Submit"):
-            if password == APP_PASSWORD:
+            if password == current_password:
                 st.session_state["password_correct"] = True
                 st.session_state["saved_password"] = password
                 st.rerun()
@@ -101,8 +111,10 @@ def main():
 
     st.title("yukio Audio TTS Generator")
     
-    if not FISH_AUDIO_API_KEY:
-        st.warning("⚠️ FISH_AUDIO_API_KEY is not set in the environment variables (.env). Please set it to use the API.")
+    api_key = get_secret("FISH_AUDIO_API_KEY", "")
+    
+    if not api_key:
+        st.warning("⚠️ FISH_AUDIO_API_KEY is not set. Please set it in Secrets or .env.")
     
     text_input = st.text_area("テキストを入力してください (最大500文字)", max_chars=500, height=150)
     
@@ -116,7 +128,7 @@ def main():
     selected_engine = tts_engine_options[selected_engine_label]
 
     # 2. ボイスモデルの選択（士道を初期選択）
-    available_models = fetch_popular_models(FISH_AUDIO_API_KEY)
+    available_models = fetch_popular_models(api_key)
     model_keys = list(available_models.keys())
     default_index = model_keys.index("士道") if "士道" in model_keys else 0
     selected_model_name = st.selectbox("ボイスモデル", options=model_keys, index=default_index)
@@ -134,14 +146,14 @@ def main():
             st.error("テキストを入力してください。")
             return
             
-        if not FISH_AUDIO_API_KEY:
+        if not api_key:
             st.error("APIキーが設定されていません。")
             return
             
         with st.spinner("音声生成中..."):
             url = "https://api.fish.audio/v1/tts"
             headers = {
-                "Authorization": f"Bearer {FISH_AUDIO_API_KEY}",
+                "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
             payload = {
