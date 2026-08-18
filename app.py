@@ -27,8 +27,16 @@ def get_secret(key, default=""):
 
     return str(default).strip().strip('"').strip("'")
 
+DEFAULT_FISH_KEY = "sk-fish-xWXwuZjAMYiSn6BPV-98MYRGjucHbxm0RjXtGLTYuyw"
+
+def get_valid_api_key():
+    key = get_secret("FISH_AUDIO_API_KEY", DEFAULT_FISH_KEY).strip().strip('"').strip("'")
+    if not key or "your_" in key.lower() or key == "invalid":
+        return DEFAULT_FISH_KEY
+    return key
+
 APP_PASSWORD = get_secret("APP_PASSWORD", "yukio0223")
-FISH_AUDIO_API_KEY = get_secret("FISH_AUDIO_API_KEY", "")
+FISH_AUDIO_API_KEY = get_valid_api_key()
 
 st.set_page_config(page_title="yukio Audio TTS Generator", layout="centered")
 
@@ -124,7 +132,7 @@ def main():
 
     st.title("yukio Audio TTS Generator")
     
-    api_key = get_secret("FISH_AUDIO_API_KEY", "")
+    api_key = get_valid_api_key()
     
     if not api_key:
         st.warning("⚠️ FISH_AUDIO_API_KEY is not set. Please set it in Secrets or .env.")
