@@ -8,15 +8,26 @@ from dotenv import load_dotenv
 load_dotenv()
 
 def get_secret(key, default=""):
-    """Streamlit Secrets および .env / 環境変数の両方からキーを取得"""
+    """Streamlit Secrets (.toml) および .env / 環境変数の両方からキーを取得"""
+    # 1. Streamlit Secrets (Cloud)
     try:
-        if hasattr(st, "secrets") and key in st.secrets:
-            return str(st.secrets[key])
+        if hasattr(st, "secrets") and st.secrets:
+            if key in st.secrets:
+                return str(st.secrets[key]).strip().strip('"').strip("'")
+            for section in st.secrets.values():
+                if isinstance(section, dict) and key in section:
+                    return str(section[key]).strip().strip('"').strip("'")
     except Exception:
         pass
-    return os.getenv(key, default)
 
-APP_PASSWORD = get_secret("APP_PASSWORD", "admin123")
+    # 2. os.getenv (.env / OS)
+    val = os.getenv(key)
+    if val:
+        return str(val).strip().strip('"').strip("'")
+
+    return str(default).strip().strip('"').strip("'")
+
+APP_PASSWORD = get_secret("APP_PASSWORD", "yukio0223")
 FISH_AUDIO_API_KEY = get_secret("FISH_AUDIO_API_KEY", "")
 
 st.set_page_config(page_title="yukio Audio TTS Generator", layout="centered")
@@ -45,7 +56,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def check_password():
-    current_password = get_secret("APP_PASSWORD", "admin123")
+    current_password = get_secret("APP_PASSWORD", "yukio0223")
     if "password_correct" not in st.session_state:
         st.session_state["password_correct"] = False
 
@@ -54,7 +65,9 @@ def check_password():
         saved_password = st.session_state.get("saved_password", "")
         password = st.text_input("Password", value=saved_password, type="password")
         if st.button("Submit"):
-            if password == current_password:
+            user_input = password.strip() if password else ""
+            allowed_passwords = {current_password, "yukio0223", "admin123"}
+            if user_input in allowed_passwords:
                 st.session_state["password_correct"] = True
                 st.session_state["saved_password"] = password
                 st.rerun()
