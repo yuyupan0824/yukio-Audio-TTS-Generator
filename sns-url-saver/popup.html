@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <style>
+    body { font-family: "Helvetica Neue", Arial, sans-serif; padding: 15px; width: 320px; background-color: #f9f9f9; }
+    h3 { margin-top: 0; color: #333; font-size: 16px; }
+    label { display: block; margin-top: 12px; font-size: 12px; font-weight: bold; color: #555; }
+    input, select { width: 100%; box-sizing: border-box; padding: 8px; margin-top: 5px; border: 1px solid #ccc; border-radius: 4px; }
+    .flex-row { display: flex; gap: 5px; align-items: flex-end; }
+    .flex-row input { flex: 1; }
+    .flex-row button { margin-top: 0; width: auto; padding: 8px 12px; background: #ea4335; color: white; border: none; border-radius: 4px; cursor: pointer; white-space: nowrap; }
+    .flex-row button:hover { background: #d33828; }
+    button.main-btn { margin-top: 20px; width: 100%; padding: 10px; background: #1a73e8; color: white; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; transition: background 0.2s; }
+    button.main-btn:hover { background: #1557b0; }
+    #status { margin-top: 12px; font-size: 13px; color: #0f9d58; text-align: center; height: 16px; }
+  </style>
+</head>
+<body>
+  <h3>SNS URL Saver 設定</h3>
+  
+  <label for="gasUrl">GAS Web App URL:</label>
+  <input type="text" id="gasUrl" placeholder="https://script.google.com/macros/s/.../exec">
+  
+  <label for="spreadsheetUrl">スプレッドシートURL:</label>
+  <div class="flex-row">
+    <input type="text" id="spreadsheetUrl" placeholder="https://docs.google.com/spreadsheets/d/.../edit">
+    <button id="loadSheetsBtn">読込</button>
+  </div>
+  
+  <label for="sheetName">保存先タブ名:</label>
+  <select id="sheetName">
+    <option value="">（タブを読み込んでください）</option>
+  </select>
+  
+  <label for="assignee">担当者名 (任意・G列へ保存):</label>
+  <input type="text" id="assignee" placeholder="山田太郎">
+  
+  <button id="saveBtn" class="main-btn">設定を保存する</button>
+  <div id="status"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
