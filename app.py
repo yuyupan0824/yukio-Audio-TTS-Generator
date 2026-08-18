@@ -187,41 +187,55 @@ def main():
                 payload["reference_id"] = reference_id.strip()
                 
             try:
-                with httpx.Client(timeout=30.0) as client:
-                    response = client.post(url, json=payload, headers=headers)
+                import concurrent.futures
                 
-                if response.status_code == 200:
-                    audio_bytes = response.content
-                    st.success("音声生成が完了しました！")
-                    st.audio(audio_bytes, format="audio/mp3")
-                    
-                    # 入力テキストの先頭10文字からファイル名を生成（記号・改行を除去）
-                    clean_text = "".join(text_input.splitlines()).strip()
-                    sanitized_text = re.sub(r'[\\/*?:"<>|]', "", clean_text)
-                    short_title = sanitized_text[:10].strip() or "output"
-                    file_name = f"{short_title}.mp3"
+                def fetch_audio(idx):
+                    with httpx.Client(timeout=60.0) as client:
+                        return idx, client.post(url, json=payload, headers=headers)
+                        
+                results = []
+                with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                    futures = [executor.submit(fetch_audio, i) for i in range(2)]
+                    for future in concurrent.futures.as_completed(futures):
+                        results.append(future.result())
+                        
+                results.sort(key=lambda x: x[0])
+                
+                success_count = 0
+                for i, response in results:
+                    if response.status_code == 200:
+                        success_count += 1
+                        audio_bytes = response.content
+                        st.success(f"パターン {i+1} の生成が完了しました！")
+                        st.audio(audio_bytes, format="audio/mp3")
+                        
+                        clean_text = "".join(text_input.splitlines()).strip()
+                        sanitized_text = re.sub(r'[\/*?:"<>|]', "", clean_text)
+                        short_title = sanitized_text[:10].strip() or "output"
+                        file_name = f"{short_title}_pattern{i+1}.mp3"
 
-                    st.download_button(
-                        label=f"音声をダウンロード ({file_name})",
-                        data=audio_bytes,
-                        file_name=file_name,
-                        mime="audio/mp3"
-                    )
+                        st.download_button(
+                            label=f"パターン {i+1} をダウンロード ({file_name})",
+                            data=audio_bytes,
+                            file_name=file_name,
+                            mime="audio/mp3",
+                            key=f"dl_{i+1}_{datetime.now().timestamp()}"
+                        )
 
-                    # 履歴の保存（最大10件）
-                    now_str = datetime.now().strftime("%H:%M:%S")
-                    history_item = {
-                        "timestamp": now_str,
-                        "text": text_input,
-                        "filename": file_name,
-                        "audio_bytes": audio_bytes,
-                        "model_name": f"{selected_model_name} [{selected_engine}]"
-                    }
-                    st.session_state["audio_history"].insert(0, history_item)
+                        now_str = datetime.now().strftime("%H:%M:%S")
+                        history_item = {
+                            "timestamp": f"{now_str} (P{i+1})",
+                            "text": text_input,
+                            "filename": file_name,
+                            "audio_bytes": audio_bytes,
+                            "model_name": f"{selected_model_name} [{selected_engine}]"
+                        }
+                        st.session_state["audio_history"].insert(0, history_item)
+                    else:
+                        st.error(f"パターン {i+1} API Error ({response.status_code}): {response.text}")
+                        
+                if success_count > 0:
                     st.session_state["audio_history"] = st.session_state["audio_history"][:10]
-
-                else:
-                    st.error(f"API Error ({response.status_code}): {response.text}")
             except Exception as e:
                 st.error(f"An error occurred: {str(e)}")
 
